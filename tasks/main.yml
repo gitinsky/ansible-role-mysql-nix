@@ -1,0 +1,37 @@
+- name: create a user for MySQL and Nix
+  user: name=mysql-nix state=present
+
+- name: create a folder for Nix
+  file: state=directory dest=/nix owner=mysql-nix group=mysql-nix
+
+- name: install curl
+  apt: name=curl state=present
+
+- name: bootstrap Nix
+  become: yes
+  become_user: mysql-nix
+  shell: bash -c 'bash <(curl https://nixos.org/nix/install)'
+
+- name: install MySQL
+  become: yes
+  become_user: mysql-nix
+  shell: bash -c " source /home/mysql-nix/.nix-profile/etc/profile.d/nix.sh && nix-env -i mysql-5.5.54"
+
+- name: change owner of /var/lib/mysql
+  file: state=directory dest=/var/lib/mysql owner=mysql-nix group=mysql-nix
+
+- name: create /run/mysqld
+  file: state=directory dest=/run/mysqld owner=mysql-nix group=mysql-nix
+
+- name: run mysql_install_db
+  become: yes
+  become_user: mysql-nix
+  shell: bash -c "source /home/mysql-nix/.nix-profile/etc/profile.d/nix.sh && mysql_install_db --ldata=/var/lib/mysql"
+
+- name: put mysql-nix service descriptor
+  template: src=mysql-nix.service dest="/etc/systemd/system/mysql-nix.service" owner=root group=root mode=0644
+  when: "(ansible_distribution == 'Debian' and ansible_distribution_major_version == '8') or (ansible_distribution == 'Ubuntu' and (ansible_distribution_version|version_compare(14.04, '>')))"
+
+- name: enable mysql-nix service
+  service: name=mysql-nix enabled=yes state=started
+  when: "(ansible_distribution == 'Debian' and ansible_distribution_major_version == '8') or (ansible_distribution == 'Ubuntu' and (ansible_distribution_version|version_compare(14.04, '>')))"

@@ -1,0 +1,14 @@
+[Unit]
+Description=MySQL Nix Service
+Documentation=https://github.com/gitinsky/ansible-role-mysql-nix
+
+[Service]
+User=mysql-nix
+Group=mysql-nix
+ExecStart=/bin/bash -c "source /home/mysql-nix/.nix-profile/etc/profile.d/nix.sh && mysqld"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+Alias=mysql-nix.service
